@@ -14,9 +14,10 @@ import android.widget.FrameLayout
 import com.covision.covisionapp.fragments.MapsFragment
 import com.covision.covisionapp.fragments.ObjectDetectionFragment
 import com.covision.covisionapp.fragments.VoiceFragment
-import android.support.v4.content.ContextCompat.getSystemService
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
+
+import kotlinx.android.synthetic.main.activity_main.*;
 
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
@@ -31,7 +32,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     lateinit var objectDetection: ObjectDetectionFragment
     lateinit var fragmentManager: FragmentManager
 
-    private var speakButton: Button? = null
+    //private var speakButton: Button? = null
     private var detectionView: FrameLayout? = null
     private var mapView: FrameLayout? = null
 
@@ -40,8 +41,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         setContentView(R.layout.activity_main)
 
         // Boton principal
-        speakButton = findViewById(R.id.btnMic)
-        speakButton!!.setOnClickListener(this)
+        btnMic.setOnClickListener(this)
 
         // Fragmentos
         fragmentManager = supportFragmentManager

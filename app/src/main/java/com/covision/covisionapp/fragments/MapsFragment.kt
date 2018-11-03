@@ -1,6 +1,7 @@
 package com.covision.covisionapp.fragments
 
 import android.Manifest
+import android.content.Context
 import android.content.Context.LOCATION_SERVICE
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,6 +15,7 @@ import android.provider.Settings
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.Fragment
 import android.support.v4.content.ContextCompat
+import android.support.v7.app.AlertDialog
 import android.util.Log
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -26,6 +28,8 @@ import android.widget.ImageView
 import android.widget.Toast
 
 import com.covision.covisionapp.R
+import com.covision.covisionapp.structures.GetDirectionsData
+import com.covision.covisionapp.structures.GetDirectionsDataRoutes
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.places.PlaceDetectionClient
@@ -35,15 +39,20 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.Task
 
 import java.io.IOException
-import java.util.ArrayList
+import java.lang.Exception
+import java.lang.StringBuilder
+import java.util.*
 
-class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
+class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnMarkerDragListener, GoogleMap.OnMapClickListener, com.google.android.gms.location.LocationListener {
     internal var TAG_CODE_PERMISSION_LOCATION = 2
+    var rta = arrayOf("")
 
     //widgets
     private var mSearchText: EditText? = null
@@ -58,6 +67,18 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
     internal var mMap: GoogleMap? = null
     lateinit var locationManager: LocationManager
 
+    //distance between points
+    internal var end_latitude: Double = 0.toDouble()
+    internal var end_longitude: Double = 0.toDouble()
+    private var lastLocation: Location? = null
+    internal var latitude: Double = 0.toDouble()
+    internal var longitude: Double = 0.toDouble()
+    private var currentMarkerLocation: Marker? = null
+
+    //Duration between two points
+    private var dataTransfer: Array<Any>? = null
+    private var url: String? = null
+
     public fun getDeviceLocation(): String {
             val locationMessage = arrayOf("")
             Log.d(TAG, "getDeviceLocation: getting the devices current location")
@@ -70,15 +91,24 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
                     location.addOnCompleteListener{task->
                             if (task.isSuccessful) {
                                 Log.d(TAG, "onComplete: found location!")
-                                val currentLocation = task.result as Location?
-                                if(currentLocation != null) {
-                                    moveCamera(LatLng(currentLocation!!.latitude, currentLocation.longitude),
-                                            DEFAULT_ZOOM,
-                                            "My Location")
-                                    locationMessage[0] = showCurrentPlace()
-                                }else{
-                                    Log.d(TAG, "onComplete: current location is null :(")
+                                var currentLocation = task.result as Location?
+                                if (currentLocation == null) {
+
+                                    latitude = 4.627590
+                                    longitude = -74.080824
+                                    currentLocation = Location("")
+                                    currentLocation.longitude = 4.627590
+                                    currentLocation.latitude = -74.080824
+                                    Toast.makeText(activity,
+                                            "Please check your gps signal", Toast.LENGTH_LONG).show()
+
+                                } else {
+                                    latitude = currentLocation.latitude
+                                    longitude = currentLocation.longitude
                                 }
+                                moveCamera(LatLng(latitude, longitude), DEFAULT_ZOOM,"My Location")
+                                locationMessage[0] = showCurrentPlace()
+                                updateLocation(currentLocation)
                             } else {
                                 Log.d(TAG, "onComplete: current location is null")
                                 Toast.makeText(activity, "unable to get current location", Toast.LENGTH_SHORT).show()
@@ -96,24 +126,28 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
             return locationMessage[0]
         }
 
+    private val directionsUrl: String
+        get() {
+            val googleDirectionsUrl = StringBuilder("https://maps.googleapis.com/maps/api/directions/json?")
+            googleDirectionsUrl.append("origin=$latitude,$longitude")
+            googleDirectionsUrl.append("&destination=$end_latitude,$end_longitude")
+            googleDirectionsUrl.append("&key=" + "AIzaSyD77tEGJBBVl3gwXHS_wBbTRvsinUa1wNE")
+            return googleDirectionsUrl.toString()
+        }
 
-    /*override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }*/
+    fun setRta(text: String) {
+        rta[0] = text
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val v = inflater.inflate(R.layout.fragment_maps, container, false)
-
+        getLocationPermission()
         mapView = v.findViewById<View>(R.id.mapview) as MapView
         mapView.onCreate(savedInstanceState)
-
         // Gets to GoogleMap from the MapView and does initialization stuff
         mapView.getMapAsync(this)
-
         mSearchText = v.findViewById<View>(R.id.input_search) as EditText
         mGps = v.findViewById<View>(R.id.ic_gps) as ImageView
-        getLocationPermission()
-
         return v
     }
 
@@ -142,7 +176,8 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
         Toast.makeText(activity, "Map is Ready", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onMapReady: map is ready")
         mMap = googleMap
-
+        mMap!!.uiSettings.isZoomControlsEnabled = true
+        //getDeviceLocation()
         if (mLocationPermissionsGranted!!) {
             getDeviceLocation()
 
@@ -151,12 +186,10 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 return
             }
             mMap!!.isMyLocationEnabled = true
-            mMap!!.uiSettings.isMyLocationButtonEnabled = false
-
+            mMap!!.uiSettings.isMyLocationButtonEnabled = true
             init()
         }
 
-        mMap!!.uiSettings.isMyLocationButtonEnabled = false
         if (ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(activity!!, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             googleMap.isMyLocationEnabled = true
             mMap!!.isMyLocationEnabled = true
@@ -172,6 +205,10 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
                     TAG_CODE_PERMISSION_LOCATION)
         }
 
+
+        mMap!!.setOnMarkerDragListener(this)
+        mMap!!.setOnMapClickListener(this)
+
     }
 
     private fun init() {
@@ -184,7 +221,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
                     || keyEvent.keyCode == KeyEvent.KEYCODE_ENTER) {
                 //execute our method for searching
                 Log.d(TAG, "trato de buscar")
-                geoLocate(mSearchText!!.text.toString())
+                geoLocate("")
                 Log.d(TAG, "trate de buscar")
             }
             Log.d(TAG, "no se pudo entrar a buscar")
@@ -198,8 +235,12 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
 
-    fun geoLocate(searchString : String) {
+    fun geoLocate(searchString : String) : String{
+        var searchString = searchString
         Log.d(TAG, "geoLocate: geolocating")
+        var dist = ""
+
+        if (searchString === "") searchString = mSearchText!!.text.toString()
         val geocoder = Geocoder(context)
         var list: List<Address> = ArrayList()
         try {
@@ -212,15 +253,26 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
             val address = list[0]
 
             Log.d(TAG, "geoLocate: found a location: " + address.toString())
-            //Toast.makeText(this, address.toString(), Toast.LENGTH_SHORT).show();
-
             moveCamera(LatLng(address.latitude, address.longitude), DEFAULT_ZOOM,
                     address.getAddressLine(0))
+
+            end_latitude = address.latitude
+            end_longitude = address.longitude
+            dist = putMarkerDistanceOF()
+            durationOF()
+
+            paintDirections()
+
         }
+        return if (dist == "") {
+            return "error"
+        } else
+            return dist
     }
 
     private fun moveCamera(latLng: LatLng, zoom: Float, title: String) {
         Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + ", lng: " + latLng.longitude)
+
         mMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom))
 
         if (title != "My Location") {
@@ -238,9 +290,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
 
     private fun getLocationPermission() {
-        locationManager = context!!.getSystemService(LOCATION_SERVICE) as LocationManager
-
-
+        locationManager = activity!!.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
         Log.d(TAG, "getLocationPermission: getting location permissions")
         val permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
         if (ContextCompat.checkSelfPermission(activity!!.applicationContext,
@@ -248,25 +298,46 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
             if (ContextCompat.checkSelfPermission(activity!!.applicationContext,
                             COURSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 mLocationPermissionsGranted = true
-
                 //verificar si el GPS está encendido
                 if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                     Log.d(TAG, "el GPS no está activado")
-                    val intent1 = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                    startActivity(intent1)
+                    showSettingsAlert()
                 }
+
             } else {
-                ActivityCompat.requestPermissions(activity!!,
-                        permissions,
-                        LOCATION_PERMISSION_REQUEST_CODE)
+                ActivityCompat.requestPermissions(activity!!, permissions, LOCATION_PERMISSION_REQUEST_CODE)
             }
         } else {
-            ActivityCompat.requestPermissions(activity!!,
-                    permissions,
-                    LOCATION_PERMISSION_REQUEST_CODE)
+            ActivityCompat.requestPermissions(activity!!, permissions, LOCATION_PERMISSION_REQUEST_CODE)
         }
     }
+    /**
+     * Function to show settings alert dialog
+     */
+    fun showSettingsAlert() {
+        val alertDialog = AlertDialog.Builder(context!!)
 
+        // Setting Dialog Title
+        alertDialog.setTitle("GPS is settings")
+
+        // Setting Dialog Message
+        alertDialog.setMessage("GPS is not enabled. Do you want to go to settings menu?")
+
+        // Setting Icon to Dialog
+        //alertDialog.setIcon(R.drawable.delete);
+
+        // On pressing Settings button
+        alertDialog.setPositiveButton("Settings") { dialog, which ->
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            context!!.startActivity(intent)
+        }
+
+        // on pressing cancel button
+        alertDialog.setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
+
+        // Showing Alert Message
+        alertDialog.show()
+    }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         Log.d(TAG, "onRequestPermissionsResult: called.")
         mLocationPermissionsGranted = false
@@ -289,11 +360,67 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     override fun onLocationChanged(location: Location) {
-        //Hey, a non null location! Sweet!
+        lastLocation = location
+        if (currentMarkerLocation != null) {
+            currentMarkerLocation!!.remove()
+        }
+        latitude = location.latitude
+        longitude = location.longitude
+        val ltn = LatLng(location.latitude, location.longitude)
+        val mop = MarkerOptions()
+        mop.position(ltn)
+        mop.draggable(true)
+        mop.title("Current position")
+        mop.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))
+        currentMarkerLocation = mMap!!.addMarker(mop)
 
+        mMap!!.moveCamera(CameraUpdateFactory.newLatLng(ltn))
+        mMap!!.animateCamera(CameraUpdateFactory.zoomTo(11f))
         //remove location callback:
         locationManager.removeUpdates(this)
+    }
 
+    fun putMarkerDistanceOF(): String {
+        val mop = MarkerOptions()
+        mop.position(LatLng(end_latitude, end_longitude))
+        mop.title("Destination ")
+        mop.draggable(true)
+        val results = FloatArray(10)
+        Location.distanceBetween(latitude, longitude, end_latitude, end_longitude, results)
+        mop.snippet("Distance = " + results[0])
+        mMap!!.addMarker(mop)
+        Log.d("MAMELO", "La distancia" + results[0])
+        return results[0].toString()
+    }
+
+    fun durationOF(): String {
+        dataTransfer = arrayOf<Any>(3)
+        url = directionsUrl
+        var gtdta = GetDirectionsData()
+        dataTransfer!![0] = mMap!!
+        dataTransfer!![1] = url!!
+        dataTransfer!![2] = LatLng(end_latitude, end_longitude)
+        gtdta.execute(dataTransfer)
+        return gtdta.duration!!
+
+    }
+    fun updateLocation(location: Location?) {
+        lastLocation = location
+        if (currentMarkerLocation != null) {
+            currentMarkerLocation!!.remove()
+        }
+        latitude = location!!.latitude
+        longitude = location.longitude
+        val ltn = LatLng(location.latitude, location.longitude)
+        val mop = MarkerOptions()
+        mop.position(ltn)
+        mop.draggable(true)
+        mop.title("Current position")
+        mop.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))
+        currentMarkerLocation = mMap!!.addMarker(mop)
+
+        mMap!!.moveCamera(CameraUpdateFactory.newLatLng(ltn))
+        mMap!!.animateCamera(CameraUpdateFactory.zoomTo(11f))
     }
 
     override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {
@@ -310,7 +437,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     //lugar actual, por ahora este método es llamado por getDeviceLocation() pero puede ser llamado desdde cualquier fragmento
     fun showCurrentPlace(): String {
-        val rta = arrayOf("")
+
         if (mMap == null) {
             return rta[0]
         }
@@ -324,24 +451,63 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener {
             mPlaceDetectionClient = Places.getPlaceDetectionClient(activity!!, null)
             val placeResult = mPlaceDetectionClient!!.getCurrentPlace(null)
             placeResult.addOnCompleteListener { task ->
-                val likelyPlaces = task.result
-                var max = -1f
-                for (placeLikelihood in likelyPlaces!!) {
-                    Log.i(TAG, String.format("Place '%s' has likelihood: %g",
-                            placeLikelihood.place.name,
-                            placeLikelihood.likelihood))
-                    if (placeLikelihood.likelihood > max) {
-                        max = placeLikelihood.likelihood
-                        rta[0] = "Te encuentras en " + placeLikelihood.place.name.toString()
+                try {
+                    val likelyPlaces = task.result
+                    var max = -1f
+                    for (placeLikelihood in likelyPlaces!!) {
+                        Log.i(TAG, String.format("Place '%s' has likelihood: %g",
+                                placeLikelihood.place.name,
+                                placeLikelihood.likelihood))
+                        if (placeLikelihood.likelihood > max) {
+                            max = placeLikelihood.likelihood
+                            setRta("Te encuentras en " + placeLikelihood.place.name.toString())
+                        }
                     }
+                    likelyPlaces.release()
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-                likelyPlaces.release()
-                Log.i(TAG, "rta es: " + rta[0])
             }
+            return rta[0]
         }
         return rta[0]
     }
 
+    fun paintDirections() {
+
+        mMap!!.clear()
+        dataTransfer = arrayOf<Any>(3)
+        url = directionsUrl
+        val getDirectionsDataRoutes = GetDirectionsDataRoutes()
+        dataTransfer!![0] = mMap!!
+        dataTransfer!![1] = url!!
+        dataTransfer!![2] = LatLng(end_latitude, end_longitude)
+        getDirectionsDataRoutes.execute(dataTransfer)
+    }
+
+
+    override fun onMarkerClick(marker: Marker): Boolean {
+        marker.isDraggable = true
+        return false
+    }
+
+    override fun onMarkerDragStart(marker: Marker) {
+
+    }
+
+    override fun onMarkerDrag(marker: Marker) {
+
+    }
+
+    override fun onMarkerDragEnd(marker: Marker) {
+
+
+    }
+
+    override fun onMapClick(latLng: LatLng) {
+
+    }
     companion object {
         private val TAG = "MapActivity"
         private val FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION

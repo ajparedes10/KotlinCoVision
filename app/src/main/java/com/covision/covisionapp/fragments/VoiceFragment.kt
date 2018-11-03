@@ -23,16 +23,13 @@ import java.text.Normalizer
 import java.util.Locale
 
 class VoiceFragment : Fragment() {
-    
-    private var result: TextView? = null
     private var progressBar: ProgressBar? = null
 
     private var toSpeech: TextToSpeech? = null
     private var res: Int = 0
     private var sr: SpeechRecognizer? = null
-    private var text: String? = null
     private val LOG_TAG = "VoiceFragment"
-    private val options = arrayOf("llevame a", "donde estoy", "frente")
+    private val options = arrayOf("llevame a", "donde estoy", "frente", "adelante")
 
     private var callback: VoiceCallback? = null
 
@@ -45,7 +42,7 @@ class VoiceFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         // infla el layout del fragmento
         val myView = inflater.inflate(R.layout.fragment_voice, container, false)
-        result = myView.findViewById(R.id.textSpeech)
+
         progressBar = myView.findViewById(R.id.progressBar)
         progressBar!!.visibility = View.INVISIBLE
 
@@ -55,7 +52,7 @@ class VoiceFragment : Fragment() {
 
         toSpeech = TextToSpeech(this.context, TextToSpeech.OnInitListener { status ->
             if (status == TextToSpeech.SUCCESS) {
-                res = toSpeech!!.setLanguage(Locale.getDefault())
+                res = toSpeech!!.setLanguage(Locale("es", "ES"))
             }
             if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Toast.makeText(activity, "Tu dispositivo no soporta la función de text to speech", Toast.LENGTH_SHORT).show()
@@ -156,17 +153,15 @@ class VoiceFragment : Fragment() {
      */
     fun logthis(newinfo: String) {
         if (newinfo.compareTo("") != 0) {
-            text = newinfo
-            analizeSpeech()
-            result!!.text = text
+            analizeSpeech(newinfo)
         }
     }
 
     /*
      * método que debe revisar el comando recibido por el usuario
      */
-    fun analizeSpeech() {
-        var speech = text
+    fun analizeSpeech(sp : String) {
+        var speech = sp
         speech = Normalizer.normalize(speech, Normalizer.Form.NFD)
         speech = Regex("\\p{InCombiningDiacriticalMarks}+").replace(speech, "")
         speech = speech.toLowerCase()
@@ -186,10 +181,11 @@ class VoiceFragment : Fragment() {
             }
             1 -> this.callback?.onSpeechResult(VoiceResult.Location)
             2 -> this.callback?.onSpeechResult(VoiceResult.Detection)
+            3 -> this.callback?.onSpeechResult(VoiceResult.Detection)
 
             else -> this.callback?.onError("Lo siento, esa no es una opción disponible. Intenta de nuevo porfavor")
         }
-        Log.i(LOG_TAG, "text es: " + text!!)
+
     }
 
     /*

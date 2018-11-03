@@ -2,13 +2,20 @@ package com.covision.covisionapp.fragments
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.SurfaceTexture
+import android.graphics.drawable.BitmapDrawable
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.params.StreamConfigurationMap
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
@@ -20,11 +27,13 @@ import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
+import android.widget.ImageView
 
 import com.covision.covisionapp.R
 import com.covision.covisionapp.structures.ObjectDetectionResult
 import com.covision.covisionapp.workers.ObjectDetectionWorker
+
+import java.util.Collections
 
 class ObjectDetectionFragment : Fragment() {
     private var cameraManager: CameraManager? = null
@@ -33,6 +42,7 @@ class ObjectDetectionFragment : Fragment() {
     private var captureRequestBuilder: CaptureRequest.Builder? = null
     private var cameraFacing: Int = 0
     private var cameraId: String? = null
+    private var imageView: ImageView? = null
     private var textureView: TextureView? = null
     private var surfaceTextureListener: TextureView.SurfaceTextureListener? = null
     private var previewSize: Size? = null
@@ -40,30 +50,55 @@ class ObjectDetectionFragment : Fragment() {
     private var backgroundHandler: Handler? = null
     private var backgroundThread: HandlerThread? = null
     private var stateCallback: CameraDevice.StateCallback? = null
+    private var detectCallback: DetectionMessageCallback? = null
 
     private var cameraOpened = false
 
+    private var workingImage: Bitmap? = null
+
     interface ObjectDetectionCallback {
-        fun onDetectionResult(result: ObjectDetectionResult)
+        fun onDetectionResult(result: List<ObjectDetectionResult>)
         fun onError(message: String)
     }
 
-    fun detect() {
-        if (textureView!!.isAvailable && cameraId != null) {
+    interface DetectionMessageCallback {
+        fun onDetectionResult(result: String)
+        fun onError(message: String)
+    }
+
+    fun detect(callback: DetectionMessageCallback) {
+        detectCallback = callback
+        if (textureView!!.isAvailable && cameraId !=
+                null) {
             if (!cameraOpened) openCamera()
 
             val image = textureView!!.bitmap
-            ObjectDetectionWorker(this.context, image, object : ObjectDetectionCallback {
-                override fun onDetectionResult(result: ObjectDetectionResult) {
-                    val text = result.resultText
-                    this@ObjectDetectionFragment.activity!!.runOnUiThread { Toast.makeText(context, text, Toast.LENGTH_SHORT).show() }
+            workingImage = image.copy(image.config, true)
+            val canvas = Canvas(workingImage!!)
+            imageView!!.setImageBitmap(workingImage)
+            ObjectDetectionWorker(context, image, object : ObjectDetectionCallback {
+                override fun onDetectionResult(result: List<ObjectDetectionResult>) {
+                    val paint = Paint()
+                    paint.setARGB(1, 100, 100, 100)
+                    var text = ""
+                    for (box in result) {
+                        if (box.getIsFinal() === 1) {
+                            text = box.getClassName()
+                            if (text.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray().size == 1) text = "No encontre ningun objeto"
+                        } else {
+                            val rect = box.getBox()
+                            canvas.drawRect(rect[0].toFloat(), rect[1].toFloat(), rect[2].toFloat(), rect[3].toFloat(), paint)
+                        }
+                    }
+                    detectCallback!!.onDetectionResult(text)
                 }
 
                 override fun onError(message: String) {
-                    val text = "Ocurrio un problema al conectarse con el servidor"
-                    this@ObjectDetectionFragment.activity!!.runOnUiThread { Toast.makeText(context, text, Toast.LENGTH_SHORT).show() }
+                    detectCallback!!.onError("Ocurrio un problema al conectarse con el servidor, vuelve a intentarlo")
                 }
             }).start()
+        } else {
+            detectCallback!!.onError("Ocurrio un problema al abrir la camara")
         }
     }
 
@@ -74,6 +109,7 @@ class ObjectDetectionFragment : Fragment() {
         cameraManager = activity!!.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraFacing = CameraCharacteristics.LENS_FACING_BACK
         textureView = myView.findViewById(R.id.texture_view)
+        imageView = myView.findViewById(R.id.image_view)
 
         surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
@@ -114,13 +150,13 @@ class ObjectDetectionFragment : Fragment() {
     }
 
     override fun onResume() {
-        super.onResume()
         openBackgroundThread()
         if (textureView!!.isAvailable) {
             setUpCamera()
         } else {
             textureView!!.surfaceTextureListener = surfaceTextureListener
         }
+        super.onResume()
     }
 
     private fun setUpCamera() {
@@ -132,6 +168,7 @@ class ObjectDetectionFragment : Fragment() {
                             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
                     previewSize = streamConfigurationMap!!.getOutputSizes(SurfaceTexture::class.java)[0]
                     this.cameraId = cameraId
+                    if (!cameraOpened) openCamera()
                 }
             }
         } catch (e: CameraAccessException) {
