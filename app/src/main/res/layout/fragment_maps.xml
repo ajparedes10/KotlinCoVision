@@ -30,18 +30,18 @@
             android:contentDescription="buscar"/>
 
         <EditText
+            android:id="@+id/mSearchText"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:maxLines="1"
-            android:layout_toEndOf="@+id/ic_magnify"
             android:layout_centerVertical="true"
-            android:textSize="15sp"
-            android:textColor="#000"
-            android:id="@+id/mSearchText"
+            android:layout_toEndOf="@+id/ic_magnify"
             android:background="@null"
             android:hint="@string/maps_search"
             android:imeOptions="actionSearch"
-            android:inputType="text"/>
+            android:inputType="text"
+            android:maxLines="1"
+            android:textColor="#000"
+            android:textSize="15sp" />
 
 
     </RelativeLayout>

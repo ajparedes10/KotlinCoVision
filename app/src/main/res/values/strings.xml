@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">CoVisionApp</string>
     <string name="empty_text"></string>
-    <string name="maps_search">Enter Address, City or Zip Code</string>
+    <string name="maps_search">Ingresa una dirección o lugar</string>
 </resources>
