@@ -11,7 +11,7 @@
 
 
     <com.tomer.fadingtextview.FadingTextView
-        android:id="@+id/fading_text_view"
+        android:id="@+id/fadingTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:texts="@array/intro_messages"

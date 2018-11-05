@@ -2,15 +2,12 @@ package com.covision.covisionapp
 
 import android.animation.ValueAnimator
 import android.content.Context
-import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.FragmentManager
-import android.support.v4.app.FragmentTransaction
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
 import android.widget.FrameLayout
 
 import com.covision.covisionapp.fragments.MapsFragment
@@ -20,10 +17,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.net.wifi.WifiManager
 import android.support.v7.app.AlertDialog
-import android.util.Log
 import android.view.ViewGroup
 import android.widget.Toast
-import com.tomer.fadingtextview.FadingTextView
 
 import kotlinx.android.synthetic.main.activity_main.*;
 
@@ -43,7 +38,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     lateinit var detectionView: FrameLayout
     lateinit var mapView: FrameLayout
 
-    lateinit var fadingTextView: FadingTextView
+    //lateinit var fadingTextView: FadingTextView
     var mapsHidden = true
     var detectionHidden = true
     var savedInstanceSt: Bundle? = null
@@ -55,8 +50,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         // Boton principal
         btnMic.setOnClickListener(this)
-        // fading text on start
-        fadingTextView = findViewById(R.id.fading_text_view)
         // Fragmentos
         fragmentManager = supportFragmentManager
         if (!isNetworkAvailable()) {
@@ -158,7 +151,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                                     if (res != "error") {
                                         res = res.replace(".", "=")
                                         val d = res.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                                        Log.d("QUE FOCO ", res)
+
                                         voice.textToVoice("estas a una distancia de " + d[0] + " metros")
                                     } else {
                                         voice.textToVoice("No se pudo calcular la distancia hasta su destino")

@@ -1,7 +1,5 @@
 package com.covision.covisionapp.structures
 
-import android.util.Log
-
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
@@ -48,7 +46,6 @@ class DownloadUrl {
             inputStream!!.close()
             urlConnection!!.disconnect()
         }
-        Log.d("DownloadURL", "Returning data= $data")
 
         return data
     }

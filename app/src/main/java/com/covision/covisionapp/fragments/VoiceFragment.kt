@@ -15,7 +15,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import com.covision.covisionapp.MainActivity
 import com.covision.covisionapp.R
@@ -78,27 +77,21 @@ class VoiceFragment : Fragment() {
      */
     internal inner class listener : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle) {
-            Log.d(LOG_TAG, "onReadyForSpeech")
         }
 
         override fun onBeginningOfSpeech() {
-
-            Log.d(LOG_TAG, "onBeginningOfSpeech")
             progressBar!!.isIndeterminate = false
             progressBar!!.max = 10
         }
 
         override fun onRmsChanged(rmsdB: Float) {
-            Log.d(LOG_TAG, "onRmsChanged")
             progressBar!!.progress = rmsdB.toInt()
         }
 
         override fun onBufferReceived(buffer: ByteArray) {
-            Log.d(LOG_TAG, "onBufferReceived")
         }
 
         override fun onEndOfSpeech() {
-            Log.d(LOG_TAG, "onEndofSpeech")
             progressBar!!.isIndeterminate = true
             progressBar!!.visibility = View.INVISIBLE
         }
@@ -108,8 +101,6 @@ class VoiceFragment : Fragment() {
         }
 
         override fun onResults(results: Bundle) {
-
-            Log.d(LOG_TAG, "onResults $results")
             // Lista de resultados obtenidos por el SpeechRecognizer
             val matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             //guarda el primer resultado
@@ -119,11 +110,9 @@ class VoiceFragment : Fragment() {
         }
 
         override fun onPartialResults(partialResults: Bundle) {
-            Log.d(LOG_TAG, "onPartialResults")
         }
 
         override fun onEvent(eventType: Int, params: Bundle) {
-            Log.d(LOG_TAG, "onEvent $eventType")
         }
     }
 
@@ -131,7 +120,6 @@ class VoiceFragment : Fragment() {
         this.callback = callback
         //si la app no tiene permiso para usar microfono, lo pide
         if (ActivityCompat.checkSelfPermission(context!!, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Log.v(LOG_TAG, "asking for permissions")
             ActivityCompat.requestPermissions(activity!!, arrayOf(Manifest.permission.RECORD_AUDIO), MainActivity.REQUEST_RECORD)
         } else {
             progressBar!!.visibility = View.VISIBLE
@@ -144,7 +132,6 @@ class VoiceFragment : Fragment() {
             intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
 
             sr!!.startListening(intent)
-            Log.i(LOG_TAG, "Intent sent")
         }
     }
 
@@ -166,24 +153,26 @@ class VoiceFragment : Fragment() {
         speech = Regex("\\p{InCombiningDiacriticalMarks}+").replace(speech, "")
         speech = speech.toLowerCase()
         var opt = -1
-        Log.i(LOG_TAG, "analize: normalizó a $speech")
         var i = 0
+        var div: Array<String>
         while (i < options.size && opt == -1) {
             if (speech.contains(options[i])) opt = i
             i++
         }
-        Log.i(LOG_TAG, "analize: opcion $opt")
         when (opt) {
             0 -> if (speech.contains(" a ")) {
-                //puede ser a, al, a la
-                val div = speech.split(" a ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                div = speech.split(" a ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                this.callback?.onSpeechResult(VoiceResult.Route, div[1])
+            }
+            else if (speech.contains(" al ")){
+                div = speech.split(" al ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                 this.callback?.onSpeechResult(VoiceResult.Route, div[1])
             }
             1 -> this.callback?.onSpeechResult(VoiceResult.Location)
             2 -> this.callback?.onSpeechResult(VoiceResult.Detection)
             3 -> this.callback?.onSpeechResult(VoiceResult.Detection)
 
-            else -> this.callback?.onError("Lo siento, esa no es una opción disponible. Intenta de nuevo porfavor")
+            else -> this.callback?.onError("Lo siento, esa no es una opción disponible. Intenta de nuevo")
         }
 
     }
@@ -193,7 +182,6 @@ class VoiceFragment : Fragment() {
      */
     fun textToVoice(message: String?) {
         if (message != null) {
-            Log.i(LOG_TAG, "entra else textToSpeach")
             toSpeech?.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
         }
     }

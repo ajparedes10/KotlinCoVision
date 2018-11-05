@@ -44,6 +44,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.Task
+import kotlinx.android.synthetic.main.fragment_maps.*
 
 import java.io.IOException
 import java.lang.Exception
@@ -55,8 +56,8 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
     var rta = arrayOf("")
 
     //widgets
-    private var mSearchText: EditText? = null
-    private var mGps: ImageView? = null
+    //private var mSearchText: EditText? = null
+    //private var mGps: ImageView? = null
 
     //vars
     private var mLocationPermissionsGranted: Boolean? = false
@@ -142,12 +143,10 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val v = inflater.inflate(R.layout.fragment_maps, container, false)
         getLocationPermission()
-        mapView = v.findViewById<View>(R.id.mapview) as MapView
+        mapView = v.findViewById<View>(R.id.mapView) as MapView
         mapView.onCreate(savedInstanceState)
         // Gets to GoogleMap from the MapView and does initialization stuff
         mapView.getMapAsync(this)
-        mSearchText = v.findViewById<View>(R.id.input_search) as EditText
-        mGps = v.findViewById<View>(R.id.ic_gps) as ImageView
         return v
     }
 
@@ -172,9 +171,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
 
     override fun onMapReady(googleMap: GoogleMap) {
 
-
         Toast.makeText(activity, "Map is Ready", Toast.LENGTH_SHORT).show()
-        Log.d(TAG, "onMapReady: map is ready")
         mMap = googleMap
         mMap!!.uiSettings.isZoomControlsEnabled = true
         //getDeviceLocation()
@@ -212,7 +209,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
     }
 
     private fun init() {
-        Log.d(TAG, "init: initializing")
         mSearchText!!.setOnEditorActionListener { textView, actionId, keyEvent ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH
                     || actionId == EditorInfo.IME_ACTION_DONE
@@ -220,15 +216,11 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
                     || keyEvent.action == KeyEvent.KEYCODE_ENTER
                     || keyEvent.keyCode == KeyEvent.KEYCODE_ENTER) {
                 //execute our method for searching
-                Log.d(TAG, "trato de buscar")
                 geoLocate("")
-                Log.d(TAG, "trate de buscar")
             }
-            Log.d(TAG, "no se pudo entrar a buscar")
             false
         }
         mGps!!.setOnClickListener {
-            Log.d(TAG, "onClick: clicked gps icon")
             getDeviceLocation()
         }
         hideSoftKeyboard()
@@ -252,7 +244,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
         if (list.size > 0) {
             val address = list[0]
 
-            Log.d(TAG, "geoLocate: found a location: " + address.toString())
             moveCamera(LatLng(address.latitude, address.longitude), DEFAULT_ZOOM,
                     address.getAddressLine(0))
 
@@ -271,7 +262,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
     }
 
     private fun moveCamera(latLng: LatLng, zoom: Float, title: String) {
-        Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + ", lng: " + latLng.longitude)
 
         mMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom))
 
@@ -291,7 +281,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
 
     private fun getLocationPermission() {
         locationManager = activity!!.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
-        Log.d(TAG, "getLocationPermission: getting location permissions")
         val permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
         if (ContextCompat.checkSelfPermission(activity!!.applicationContext,
                         FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -339,7 +328,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
         alertDialog.show()
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        Log.d(TAG, "onRequestPermissionsResult: called.")
         mLocationPermissionsGranted = false
 
         when (requestCode) {
@@ -352,7 +340,6 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
                             return
                         }
                     }
-                    Log.d(TAG, "onRequestPermissionsResult: permission granted")
                     mLocationPermissionsGranted = true
                 }
             }
@@ -389,19 +376,18 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
         Location.distanceBetween(latitude, longitude, end_latitude, end_longitude, results)
         mop.snippet("Distance = " + results[0])
         mMap!!.addMarker(mop)
-        Log.d("MAMELO", "La distancia" + results[0])
         return results[0].toString()
     }
 
     fun durationOF(): String {
         dataTransfer = arrayOfNulls<Any>(3)
         url = directionsUrl
-        var gtdta = GetDirectionsData()
+        val gtdta = GetDirectionsData()
         dataTransfer!![0] = mMap!!
         dataTransfer!![1] = url!!
         dataTransfer!![2] = LatLng(end_latitude, end_longitude)
-        gtdta!!.execute(dataTransfer)
-        return gtdta!!.duration!!
+        gtdta.execute(dataTransfer)
+        return gtdta.duration
 
     }
     fun updateLocation(location: Location?) {

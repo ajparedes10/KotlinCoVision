@@ -1,7 +1,5 @@
 package com.covision.covisionapp.structures
 
-import android.util.Log
-
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -154,8 +152,6 @@ class DataParser {
     fun parse(jsonData: String): List<HashMap<String, String>> {
         var jsonArray: JSONArray? = null
         val jsonObject: JSONObject
-
-        Log.d("json data", jsonData)
 
         try {
             jsonObject = JSONObject(jsonData)

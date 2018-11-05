@@ -2,7 +2,6 @@ package com.covision.covisionapp.structures
 
 import android.graphics.Color
 import android.os.AsyncTask
-import android.util.Log
 
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
@@ -16,12 +15,10 @@ class GetDirectionsDataRoutes : AsyncTask<Any, String, String>() {
     internal lateinit var mMap: GoogleMap
     internal lateinit var url: String
     internal lateinit var googleDirectionsData: String
-    internal var duration: String? = null
-    internal var distance: String? = null
     internal lateinit var latLng: LatLng
 
     override fun doInBackground(vararg objects: Any): String {
-        var ob = objects.get(0) as Array <Any>
+        val ob = objects.get(0) as Array <*>
         mMap = ob.get(0) as GoogleMap
         url = ob.get(1) as String
         val dwnu = DownloadUrl()
