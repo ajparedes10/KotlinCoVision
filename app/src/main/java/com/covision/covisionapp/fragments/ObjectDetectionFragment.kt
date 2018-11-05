@@ -76,7 +76,7 @@ class ObjectDetectionFragment : Fragment() {
             workingImage = image.copy(image.config, true)
             val canvas = Canvas(workingImage!!)
             imageView!!.setImageBitmap(workingImage)
-            ObjectDetectionWorker(context, image, object : ObjectDetectionCallback {
+            ObjectDetectionWorker(context!!, image, object : ObjectDetectionCallback {
                 override fun onDetectionResult(result: List<ObjectDetectionResult>) {
                     val paint = Paint()
                     paint.setARGB(1, 100, 100, 100)

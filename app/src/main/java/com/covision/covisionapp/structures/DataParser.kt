@@ -19,7 +19,6 @@ class DataParser {
         var distance = ""
 
         if (googleDirectionsJson != null) {
-            Log.d("Json RESPONSE ", googleDirectionsJson.toString())
             try {
                 duration = googleDirectionsJson.getJSONObject(0).getJSONObject("duration").getString("text")
                 distance = googleDirectionsJson.getJSONObject(0).getJSONObject("distance").getString("text")
@@ -43,9 +42,6 @@ class DataParser {
         var latitude = ""
         var longitude = ""
         var reference = ""
-
-        Log.d("DataParser", "jsonobject =" + googlePlaceJson.toString())
-
 
         try {
             if (!googlePlaceJson.isNull("name")) {
@@ -107,7 +103,7 @@ class DataParser {
 
     }
 
-    fun parseDirectionsPaint(jsonData: String): Array<String>? {
+    fun parseDirectionsPaint(jsonData: String): Array<String?>? {
         var jsonArray: JSONArray? = null
         val jsonObject: JSONObject
 
@@ -122,11 +118,11 @@ class DataParser {
 
     }
 
-    fun getPaths(googleStepsJson: JSONArray?): Array<String>? {
-        var polylines: Array<String>
+    fun getPaths(googleStepsJson: JSONArray?): Array<String?>? {
+        var polylines: Array<String?>
         if (googleStepsJson != null) {
             val count = googleStepsJson.length()
-            polylines = arrayOf<String>()
+            polylines = arrayOfNulls<String>(count)
             for (i in 0 until count) {
                 try {
                     polylines[i] = getPath(googleStepsJson.getJSONObject(i))

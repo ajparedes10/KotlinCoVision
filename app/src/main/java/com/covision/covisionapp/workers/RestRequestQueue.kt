@@ -8,7 +8,7 @@ import com.android.volley.toolbox.Volley
 
 class RestRequestQueue private constructor(context: Context) {
 
-    private var queue: RequestQueue? = null
+    private var queue: RequestQueue
 
     // getApplicationContext() is key, it keeps you from leaking the
     // Activity or BroadcastReceiver if someone passes one in.
@@ -17,7 +17,7 @@ class RestRequestQueue private constructor(context: Context) {
             if (queue == null) {
                 queue = Volley.newRequestQueue(ctx.applicationContext)
             }
-            return queue!!
+            return queue
         }
 
     init {
@@ -30,15 +30,15 @@ class RestRequestQueue private constructor(context: Context) {
     }
 
     companion object {
-        private var instance: RestRequestQueue? = null
-        private lateinit var ctx: Context
+        var instance: RestRequestQueue? = null
+        lateinit var ctx: Context
 
         @Synchronized
-        fun getInstance(context: Context): RestRequestQueue {
+        fun getInstance(context: Context): RestRequestQueue? {
             if (instance == null) {
                 instance = RestRequestQueue(context)
             }
-            return instance as RestRequestQueue
+            return instance
         }
     }
 }

@@ -28,15 +28,17 @@ class DownloadUrl {
             val br = BufferedReader(InputStreamReader(inputStream))
             val sb = StringBuffer()
 
-            var line = ""
-            do{
-                line = br.readLine()
-                sb.append(line!!)
-            }
-            while ((line) != null)
+            var line = br!!.readLine()
+            while ((line) != null){
+                if(line!=null)sb!!.append(line)
 
-            data = sb.toString()
-            br.close()
+                line = br!!.readLine()
+
+            }
+
+
+            data = sb!!.toString()
+            br!!.close()
 
         } catch (e: MalformedURLException) {
             e.printStackTrace()

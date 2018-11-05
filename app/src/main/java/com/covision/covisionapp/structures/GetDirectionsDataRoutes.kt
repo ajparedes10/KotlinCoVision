@@ -2,6 +2,7 @@ package com.covision.covisionapp.structures
 
 import android.graphics.Color
 import android.os.AsyncTask
+import android.util.Log
 
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
@@ -20,12 +21,12 @@ class GetDirectionsDataRoutes : AsyncTask<Any, String, String>() {
     internal lateinit var latLng: LatLng
 
     override fun doInBackground(vararg objects: Any): String {
-        mMap = objects[0] as GoogleMap
-        url = objects[1] as String
+        var ob = objects.get(0) as Array <Any>
+        mMap = ob.get(0) as GoogleMap
+        url = ob.get(1) as String
         val dwnu = DownloadUrl()
-        latLng = objects[2] as LatLng
+        latLng = ob.get(2) as LatLng
         try {
-
             googleDirectionsData = dwnu.readUrl(url)
         } catch (e: IOException) {
             e.printStackTrace()
@@ -36,14 +37,14 @@ class GetDirectionsDataRoutes : AsyncTask<Any, String, String>() {
 
     override fun onPostExecute(s: String) {
 
-        val directionList: Array<String>?
+        val directionList: Array<String?>?
         val parser = DataParser()
         directionList = parser.parseDirectionsPaint(s)
-        displayDirection(directionList!!)
+        if(directionList != null) displayDirection(directionList)
 
     }
 
-    fun displayDirection(directionsList: Array<String>) {
+    fun displayDirection(directionsList: Array<String?>) {
         val count = directionsList.size
         for (i in 0 until count) {
             val options = PolylineOptions()

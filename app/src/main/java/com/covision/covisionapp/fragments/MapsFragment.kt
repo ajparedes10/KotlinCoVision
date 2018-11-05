@@ -76,7 +76,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
     private var currentMarkerLocation: Marker? = null
 
     //Duration between two points
-    private var dataTransfer: Array<Any>? = null
+    private var dataTransfer: Array<Any?>? = null
     private var url: String? = null
 
     public fun getDeviceLocation(): String {
@@ -394,14 +394,14 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
     }
 
     fun durationOF(): String {
-        dataTransfer = arrayOf<Any>(3)
+        dataTransfer = arrayOfNulls<Any>(3)
         url = directionsUrl
         var gtdta = GetDirectionsData()
         dataTransfer!![0] = mMap!!
         dataTransfer!![1] = url!!
         dataTransfer!![2] = LatLng(end_latitude, end_longitude)
-        gtdta.execute(dataTransfer)
-        return gtdta.duration!!
+        gtdta!!.execute(dataTransfer)
+        return gtdta!!.duration!!
 
     }
     fun updateLocation(location: Location?) {
@@ -455,9 +455,7 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
                     val likelyPlaces = task.result
                     var max = -1f
                     for (placeLikelihood in likelyPlaces!!) {
-                        Log.i(TAG, String.format("Place '%s' has likelihood: %g",
-                                placeLikelihood.place.name,
-                                placeLikelihood.likelihood))
+
                         if (placeLikelihood.likelihood > max) {
                             max = placeLikelihood.likelihood
                             setRta("Te encuentras en " + placeLikelihood.place.name.toString())
@@ -477,12 +475,13 @@ class MapsFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap
     fun paintDirections() {
 
         mMap!!.clear()
-        dataTransfer = arrayOf<Any>(3)
+        dataTransfer = arrayOfNulls<Any>(3)
         url = directionsUrl
-        val getDirectionsDataRoutes = GetDirectionsDataRoutes()
+
         dataTransfer!![0] = mMap!!
         dataTransfer!![1] = url!!
         dataTransfer!![2] = LatLng(end_latitude, end_longitude)
+        val getDirectionsDataRoutes = GetDirectionsDataRoutes()
         getDirectionsDataRoutes.execute(dataTransfer)
     }
 
